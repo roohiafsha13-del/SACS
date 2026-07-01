@@ -22,9 +22,9 @@ class Config:
     SQLALCHEMY_ECHO = False          # Set True to log all SQL queries
 
     # ── Campus GPS Boundary ───────────────────────────────────
-    CAMPUS_LAT    = float(os.environ.get('CAMPUS_LAT',    17.4492))
-    CAMPUS_LON    = float(os.environ.get('CAMPUS_LON',    78.3915))
-    CAMPUS_RADIUS = float(os.environ.get('CAMPUS_RADIUS_METRES', 100))  # metres
+    CAMPUS_LAT    = float(os.environ.get('CAMPUS_LAT',    17.423024))
+    CAMPUS_LON    = float(os.environ.get('CAMPUS_LON',    78.494913))
+    CAMPUS_RADIUS = float(os.environ.get('CAMPUS_RADIUS_METRES', 10))  # metres
 
     # ── Session ───────────────────────────────────────────────
     SESSION_COOKIE_SECURE   = False   # Set True in production (HTTPS only)
