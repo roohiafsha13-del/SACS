@@ -30,12 +30,14 @@ from datetime import datetime, date
 
 from flask import (
     Flask, render_template, redirect, url_for,
-    request, flash, jsonify, Response, abort
+    request, flash, jsonify, Response, abort,
+    send_from_directory
 )
 from flask_login import (
     LoginManager, login_user, logout_user,
     login_required, current_user
 )
+from flask_wtf.csrf import CSRFProtect
 
 from config import get_config
 from models import db, bcrypt, User, Attendance, Location
@@ -49,21 +51,20 @@ from geo_validation import validate_campus_location, parse_coords
 # ============================================================
 # APPLICATION FACTORY
 # ============================================================
-from flask_wtf.csrf import CSRFProtect
-
 def create_app():
     app = Flask(__name__)
     app.config.from_object(get_config())
 
+    # Init extensions
     db.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app)
 
-    # ✅ ADD THIS
-    csrf = CSRFProtect(app)
-
+    # Register blueprints / routes
     register_routes(app)
 
+    # Create tables on first run
     with app.app_context():
         db.create_all()
 
@@ -72,6 +73,7 @@ def create_app():
 
 # ── Flask-Login setup ─────────────────────────────────────────
 login_manager = LoginManager()
+csrf = CSRFProtect()
 login_manager.login_view       = 'login_page'
 login_manager.login_message    = 'Please sign in to continue.'
 login_manager.login_message_category = 'info'
@@ -116,6 +118,20 @@ def register_routes(app: Flask):
             'now':        datetime.utcnow(),
             'today_date': date.today(),
         }
+
+    # ── PWA Routes ───────────────────────────────────────────
+    @app.route('/manifest.json')
+    def manifest():
+        return send_from_directory('static', 'manifest.json',
+                                   mimetype='application/manifest+json')
+
+    @app.route('/service-worker.js')
+    def service_worker():
+        response = send_from_directory('static', 'service-worker.js',
+                                       mimetype='application/javascript')
+        response.headers['Service-Worker-Allowed'] = '/'
+        response.headers['Cache-Control'] = 'no-cache'
+        return response
 
     # ── Root ──────────────────────────────────────────────────
     @app.route('/')
@@ -224,11 +240,31 @@ def register_routes(app: Flask):
         if not coords:
             return jsonify({'success': False, 'message': 'Invalid GPS coordinates.'}), 400
 
-        lat, lon     = coords
-        accuracy     = data.get('accuracy')
-        action       = data.get('action', 'checkin')   # 'checkin' | 'checkout'
+        lat, lon = coords
+        accuracy = data.get('accuracy')
+        action   = data.get('action', 'checkin')   # 'checkin' | 'checkout'
 
-        # 2. Geo-validation
+        # 2. Server-side GPS accuracy check (check-in only)
+        # If the browser sends accuracy worse than 50m, reject the check-in.
+        # Check-out is allowed regardless of accuracy since the student is already recorded.
+        MAX_ACCURACY_METRES = 50
+        if action == 'checkin' and accuracy is not None:
+            try:
+                acc_val = float(accuracy)
+                if acc_val > MAX_ACCURACY_METRES:
+                    return jsonify({
+                        'success': False,
+                        'message': (
+                            f'GPS accuracy too low (\u00b1{acc_val:.0f}m). '
+                            f'Required: \u00b1{MAX_ACCURACY_METRES}m or better. '
+                            f'Move outdoors and retry.'
+                        ),
+                        'accuracy': acc_val,
+                    }), 200
+            except (TypeError, ValueError):
+                pass   # If accuracy unparseable, proceed — geo-validation is still done
+
+        # 3. Geo-validation
         result = validate_campus_location(lat, lon)
 
         # 3. Log GPS regardless of validation result
@@ -592,4 +628,3 @@ app = create_app()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-
