@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Attendance Monitor{% endblock %}
+{% block page_title %}Attendance Monitor{% endblock %}
+{% block breadcrumb %}Admin / Attendance{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Attendance Monitor</h1>
+    <p>Viewing: {{ sel_date.strftime('%A, %d %B %Y') }}</p>
+  </div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <form method="GET" style="display:flex;gap:.5rem">
+      <input type="date" name="date" value="{{ sel_date.isoformat() }}"
+             style="background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:.55rem .9rem;border-radius:var(--r-sm);font-size:13px;outline:none">
+      <button type="submit" class="btn btn-blue">Filter</button>
+    </form>
+    <a href="{{ url_for('export_csv', **{'from': sel_date.isoformat(), 'to': sel_date.isoformat()}) }}"
+       class="btn btn-outline">⬇ Export CSV</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card green">
+    <div class="stat-icon">✅</div>
+    <div class="stat-num">{{ present }}</div>
+    <div class="stat-label">Present</div>
+  </div>
+  <div class="stat-card danger">
+    <div class="stat-icon">❌</div>
+    <div class="stat-num">{{ total - present }}</div>
+    <div class="stat-label">Absent</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-icon">📊</div>
+    <div class="stat-num">{{ ((present/total)*100)|round(1) if total else 0 }}%</div>
+    <div class="stat-label">Attendance Rate</div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-icon">👥</div>
+    <div class="stat-num">{{ total }}</div>
+    <div class="stat-label">Total Students</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Attendance — {{ sel_date.strftime('%d %B %Y') }}</h3>
+    <div style="display:flex;gap:.4rem">
+      <span class="badge badge-green">{{ present }} Present</span>
+      <span class="badge badge-red">{{ total - present }} Absent</span>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Batch</th>
+          <th>Check In</th>
+          <th>Check Out</th>
+          <th>Duration</th>
+          <th>GPS</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in students %}
+          {% set u = row[0] %}
+          {% set login_time  = row.login_time %}
+          {% set logout_time = row.logout_time %}
+          {% set status      = row.status %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:.6rem">
+              <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">
+                {{ u.initials }}
+              </div>
+              <strong>{{ u.name }}</strong>
+            </div>
+          </td>
+          <td><span class="badge badge-blue">{{ u.batch or '—' }}</span></td>
+          <td class="td-mono {% if login_time %}td-success{% else %}td-dim{% endif %}">
+            {{ login_time.strftime('%I:%M %p') if login_time else '—' }}
+          </td>
+          <td class="td-mono {% if logout_time %}td-danger{% else %}td-dim{% endif %}">
+            {{ logout_time.strftime('%I:%M %p') if logout_time else '—' }}
+          </td>
+          <td class="td-mono td-teal">
+            {% if login_time and logout_time %}
+              {% set dur = (logout_time - login_time).total_seconds() | int %}
+              {{ '%dh %02dm' | format(dur // 3600, (dur % 3600) // 60) }}
+            {% elif login_time %}
+              Active
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>
+            {% if login_time %}
+              <span class="badge badge-blue">✓ GPS</span>
+            {% else %}
+              <span class="badge badge-neutral">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if status == 'Present' %}
+              <span class="badge badge-green">Present</span>
+            {% else %}
+              <span class="badge badge-red">Absent</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center;color:var(--text3);padding:2.5rem">
+            No records for this date.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

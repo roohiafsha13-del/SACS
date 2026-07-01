@@ -1,0 +1,47 @@
+{
+  "name": "Smart Campus Attendance System",
+  "short_name": "SCAS",
+  "description": "GPS-verified attendance marking for campus students",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0b0f1a",
+  "background_color": "#0b0f1a",
+  "lang": "en",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/static/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mark Attendance",
+      "short_name": "Mark",
+      "url": "/mark-attendance",
+      "description": "Quickly mark today's attendance"
+    },
+    {
+      "name": "My History",
+      "short_name": "History",
+      "url": "/history",
+      "description": "View attendance history"
+    }
+  ]
+}

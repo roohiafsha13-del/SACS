@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Students{% endblock %}
+{% block page_title %}Students{% endblock %}
+{% block breadcrumb %}Admin / Students{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Student Management</h1>
+    <p>{{ students.total }} students enrolled</p>
+  </div>
+  <button class="btn btn-blue" onclick="openModal('modal-add-student')">+ Add Student</button>
+</div>
+
+<!-- Search & filter bar -->
+<div class="card" style="margin-bottom:1rem">
+  <div class="card-body" style="padding:.9rem 1.25rem">
+    <form method="GET" action="{{ url_for('admin_students') }}" style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center">
+      <div class="search-bar" style="flex:1;min-width:200px">
+        <span class="search-icon">🔍</span>
+        <input name="q" value="{{ search }}" placeholder="Search by name, email, ID...">
+      </div>
+      <select name="batch" class="btn btn-outline" style="background:var(--bg2);color:var(--text);border:1px solid var(--border2);padding:.55rem .9rem;border-radius:var(--r-sm);font-size:13px;outline:none">
+        <option value="">All Batches</option>
+        <option value="CS-A" {{ 'selected' if batch == 'CS-A' }}>CS-A</option>
+        <option value="CS-B" {{ 'selected' if batch == 'CS-B' }}>CS-B</option>
+        <option value="CS-C" {{ 'selected' if batch == 'CS-C' }}>CS-C</option>
+      </select>
+      <button type="submit" class="btn btn-blue">Search</button>
+      {% if search or batch %}
+        <a href="{{ url_for('admin_students') }}" class="btn btn-outline">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- Students table -->
+<div class="card">
+  <div class="card-header">
+    <h3>All Students</h3>
+    <span class="badge badge-blue">{{ students.total }} total</span>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Batch</th>
+          <th>Attendance</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students.items %}
+        {% set att = s.attendance_percentage() %}
+        {% set att_color = 'var(--success)' if att >= 85 else 'var(--warn)' if att >= 75 else 'var(--danger)' %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:.6rem">
+              <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">
+                {{ s.initials }}
+              </div>
+              <strong>{{ s.name }}</strong>
+            </div>
+          </td>
+          <td style="font-family:var(--mono);font-size:12px">{{ s.student_id or '—' }}</td>
+          <td style="color:var(--text3)">{{ s.email }}</td>
+          <td><span class="badge badge-blue">{{ s.batch or '—' }}</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <div style="width:60px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+                <div class="progress-bar-fill {% if att >= 85 %}td-success{% elif att >= 75 %}td-warn{% else %}td-danger{% endif %}"
+                     style="width:{{ att }}%;height:100%;border-radius:3px"></div>
+              </div>
+              <span class="{% if att >= 85 %}td-success{% elif att >= 75 %}td-warn{% else %}td-danger{% endif %}"
+                    style="font-size:12px;font-weight:700">{{ att }}%</span>
+            </div>
+          </td>
+          <td>
+            {% if s.is_active %}
+              <span class="badge badge-green"><span class="badge-dot"></span>Active</span>
+            {% else %}
+              <span class="badge badge-red">Inactive</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:.4rem">
+              <a href="{{ url_for('admin_student_edit', student_id=s.id) }}" class="btn btn-sm btn-outline">✏️ Edit</a>
+              <form method="POST" action="{{ url_for('admin_student_delete', student_id=s.id) }}"
+                    onsubmit="return confirm('Remove {{ s.name }}? This cannot be undone.')">
+                {{ form.hidden_tag() }}
+                <button type="submit" class="btn btn-sm btn-danger">🗑</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center;color:var(--text3);padding:2.5rem">
+            No students found{% if search %} matching "{{ search }}"{% endif %}.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if students.pages > 1 %}
+  <div class="card-footer">
+    <div style="font-size:12px;color:var(--text2)">
+      Page {{ students.page }} of {{ students.pages }}
+    </div>
+    <div style="display:flex;gap:.4rem">
+      {% if students.has_prev %}
+        <a href="{{ url_for('admin_students', page=students.prev_num, q=search, batch=batch) }}"
+           class="btn btn-sm btn-outline">← Prev</a>
+      {% endif %}
+      {% if students.has_next %}
+        <a href="{{ url_for('admin_students', page=students.next_num, q=search, batch=batch) }}"
+           class="btn btn-sm btn-outline">Next →</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Add Student Modal -->
+<div class="modal-overlay" id="modal-add-student" onclick="closeModalOut(event,'modal-add-student')">
+  <div class="modal">
+    <h3>Add New Student</h3>
+    <p>Fill in the details to create a new student account.</p>
+    <form method="POST" action="{{ url_for('admin_students') }}" novalidate>
+      {{ form.hidden_tag() }}
+      <div class="form-row">
+        <div class="form-group2">
+          <label>Full Name</label>
+          {{ form.name(class="form-group2 input", placeholder="Alex Kumar") }}
+          {% for e in form.name.errors %}<div style="color:var(--danger);font-size:11px">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="form-group2">
+          <label>Student ID</label>
+          {{ form.student_id(placeholder="CS2401") }}
+          {% for e in form.student_id.errors %}<div style="color:var(--danger);font-size:11px">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+      <div class="form-group2">
+        <label>Email Address</label>
+        {{ form.email(placeholder="alex.kumar@campus.edu") }}
+        {% for e in form.email.errors %}<div style="color:var(--danger);font-size:11px">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="form-row">
+        <div class="form-group2">
+          <label>Batch</label>
+          {{ form.batch() }}
+        </div>
+        <div class="form-group2">
+          <label>Password</label>
+          {{ form.password(placeholder="Min. 6 characters") }}
+          {% for e in form.password.errors %}<div style="color:var(--danger);font-size:11px">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-add-student')">Cancel</button>
+        <button type="submit" class="btn btn-blue">Create Student</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

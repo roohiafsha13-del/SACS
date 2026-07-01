@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block breadcrumb %}Admin / Reports{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Reports</h1>
+    <p>Generate and export attendance analytics</p>
+  </div>
+  {% if rows %}
+  <a href="{{ url_for('export_csv') }}" class="btn btn-green">⬇ Export CSV</a>
+  {% endif %}
+</div>
+
+<!-- Filter form -->
+<div class="card" style="margin-bottom:1rem">
+  <div class="card-header"><h3>Report Parameters</h3></div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('admin_reports') }}" novalidate>
+      {{ form.hidden_tag() }}
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">
+        <div class="form-group2" style="margin-bottom:0">
+          <label>From Date</label>
+          {{ form.date_from(type="date") }}
+        </div>
+        <div class="form-group2" style="margin-bottom:0">
+          <label>To Date</label>
+          {{ form.date_to(type="date") }}
+        </div>
+        <div class="form-group2" style="margin-bottom:0">
+          <label>Batch</label>
+          {{ form.batch() }}
+        </div>
+        <div class="form-group2" style="margin-bottom:0">
+          <label>Report Type</label>
+          {{ form.report_type() }}
+        </div>
+        <button type="submit" class="btn btn-blue">Generate Report</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if rows %}
+<!-- Summary metrics -->
+{% set total_students = rows | length %}
+{% set good_count     = rows | selectattr('status','equalto','Good')     | list | length %}
+{% set risk_count     = rows | selectattr('status','equalto','At Risk')  | list | length %}
+{% set crit_count     = rows | selectattr('status','equalto','Critical') | list | length %}
+{% set avg_pct        = (rows | map(attribute='pct') | list | sum / total_students) | round(1) if total_students else 0 %}
+
+<div class="grid3" style="margin-bottom:1rem">
+  <div class="report-metric">
+    <div class="report-metric-num" style="color:var(--accent)">{{ avg_pct }}%</div>
+    <div class="report-metric-label">Average Attendance</div>
+  </div>
+  <div class="report-metric">
+    <div class="report-metric-num" style="color:var(--success)">{{ good_count }}</div>
+    <div class="report-metric-label">Students ≥ 75% (Good)</div>
+  </div>
+  <div class="report-metric">
+    <div class="report-metric-num" style="color:var(--danger)">{{ crit_count }}</div>
+    <div class="report-metric-label">Students Below 60% (Critical)</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Attendance Summary Report</h3>
+    <div style="display:flex;gap:.4rem">
+      <span class="badge badge-green">{{ good_count }} Good</span>
+      <span class="badge badge-warn">{{ risk_count }} At Risk</span>
+      <span class="badge badge-red">{{ crit_count }} Critical</span>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Batch</th>
+          <th>Working Days</th>
+          <th>Present</th>
+          <th>Absent</th>
+          <th>Attendance %</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set s = row.student %}
+        {% set color = 'var(--success)' if row.pct >= 75 else 'var(--danger)' %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:.6rem">
+              <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">
+                {{ s.initials }}
+              </div>
+              <strong>{{ s.name }}</strong>
+            </div>
+          </td>
+          <td><span class="badge badge-blue">{{ s.batch or '—' }}</span></td>
+          <td style="text-align:center">{{ row.working_days }}</td>
+          <td style="text-align:center;color:var(--success);font-weight:600">{{ row.present }}</td>
+          <td style="text-align:center;color:var(--danger);font-weight:600">{{ row.absent }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <div style="width:60px;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+                <div class="progress-bar-fill {% if row.pct >= 75 %}td-success{% else %}td-danger{% endif %}"
+                     style="width:{{ row.pct }}%;height:100%;border-radius:3px"></div>
+              </div>
+              <span class="{% if row.pct >= 75 %}td-success{% else %}td-danger{% endif %}"
+                    style="font-weight:700">{{ row.pct }}%</span>
+            </div>
+          </td>
+          <td>
+            {% if row.status == 'Good' %}
+              <span class="badge badge-green">Good</span>
+            {% elif row.status == 'At Risk' %}
+              <span class="badge badge-warn">At Risk</span>
+            {% else %}
+              <span class="badge badge-red">Critical</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center;color:var(--text3);padding:2.5rem">
+            No data for the selected filters.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer">
+    <div style="font-size:12px;color:var(--text2)">{{ rows | length }} students</div>
+    <a href="{{ url_for('export_csv') }}" class="btn btn-sm btn-outline">⬇ Download CSV</a>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <div class="empty-state-icon">📊</div>
+      <p>Select date range and click Generate Report to view attendance data.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% block title %}Mark Attendance{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+{% block breadcrumb %}Student / Mark Attendance{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Mark Attendance</h1>
+    <p>Your GPS location will be verified against campus boundaries</p>
+  </div>
+  <span class="badge badge-blue" id="mark-date-badge">Loading...</span>
+</div>
+
+<div class="grid2">
+
+  <!-- Left: GPS Panel -->
+  <div>
+    <div class="gps-panel">
+      <div class="gps-visual">
+        <div class="gps-map-bg">
+          <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0"   y1="40"  x2="400" y2="40"  stroke="var(--accent)" stroke-width=".3"/>
+            <line x1="0"   y1="80"  x2="400" y2="80"  stroke="var(--accent)" stroke-width=".3"/>
+            <line x1="0"   y1="120" x2="400" y2="120" stroke="var(--accent)" stroke-width=".3"/>
+            <line x1="0"   y1="160" x2="400" y2="160" stroke="var(--accent)" stroke-width=".3"/>
+            <line x1="80"  y1="0"   x2="80"  y2="200" stroke="var(--accent)" stroke-width=".3"/>
+            <line x1="160" y1="0"   x2="160" y2="200" stroke="var(--accent)" stroke-width=".3"/>
+            <line x1="240" y1="0"   x2="240" y2="200" stroke="var(--accent)" stroke-width=".3"/>
+            <line x1="320" y1="0"   x2="320" y2="200" stroke="var(--accent)" stroke-width=".3"/>
+            <rect x="120" y="50" width="160" height="100" rx="8"
+                  fill="none" stroke="var(--accent2)" stroke-width="1.2" stroke-dasharray="5 3"/>
+            <text x="130" y="68" font-size="9" fill="var(--accent2)"
+                  font-family="monospace" opacity=".7">Campus Boundary</text>
+          </svg>
+        </div>
+        <div class="gps-ring"></div>
+        <div class="gps-ring"></div>
+        <div class="gps-ring"></div>
+        <div class="gps-dot"></div>
+      </div>
+
+      <div class="gps-coords">
+        <div class="gps-coord-box">
+          <div class="gps-coord-label">Latitude</div>
+          <div class="gps-coord-val" id="gps-lat">Acquiring...</div>
+        </div>
+        <div class="gps-coord-box">
+          <div class="gps-coord-label">Longitude</div>
+          <div class="gps-coord-val" id="gps-lon">Acquiring...</div>
+        </div>
+      </div>
+
+      <div class="gps-status scanning" id="gps-status-box">
+        <div class="status-dot-anim"></div>
+        <span id="gps-status-text">Acquiring GPS signal...</span>
+      </div>
+
+      <div id="gps-campus-box" style="display:none" class="gps-status">
+        <span id="gps-campus-icon"></span>
+        <span id="gps-campus-text"></span>
+      </div>
+    </div>
+
+    <!-- Today status card -->
+    <div class="card">
+      <div class="card-header"><h3>Today's Status</h3></div>
+      <div class="card-body">
+        {% if today and today.status == 'Present' %}
+          <div class="att-item">
+            <span style="font-size:16px">✅</span>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">Attendance Marked</div>
+              <div class="att-time">Checked in at {{ today.login_str }}</div>
+            </div>
+            <span class="badge badge-green" style="margin-left:auto">Present</span>
+          </div>
+          {% if today.logout_time %}
+          <div class="att-item">
+            <span style="font-size:16px">🚪</span>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">Checked Out</div>
+              <div class="att-time">{{ today.logout_str }} · Duration: {{ today.duration_str }}</div>
+            </div>
+            <span class="badge badge-teal" style="margin-left:auto">{{ today.duration_str }}</span>
+          </div>
+          {% else %}
+          <div class="att-item">
+            <span style="font-size:16px">⏱</span>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">Session Active</div>
+              <div class="att-time">Still on campus</div>
+            </div>
+            <span class="badge badge-blue" style="margin-left:auto">Active</span>
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="empty-state" style="padding:1.5rem">
+            <div class="empty-state-icon" style="font-size:2rem">📍</div>
+            <p>Not yet marked today. Use the button below.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Action + Info -->
+  <div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header"><h3>Attendance Action</h3></div>
+      <div class="card-body">
+
+        <div style="margin-bottom:1.25rem">
+          <div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">Current Session</div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+            <div style="background:var(--bg2);border-radius:var(--r-sm);padding:.6rem .9rem;font-size:12px">
+              <span style="color:var(--text3)">Check-in:</span>
+              <span style="font-family:var(--mono);color:var(--success)">
+                {{ today.login_str if today and today.login_time else '—' }}
+              </span>
+            </div>
+            <div style="background:var(--bg2);border-radius:var(--r-sm);padding:.6rem .9rem;font-size:12px">
+              <span style="color:var(--text3)">Duration:</span>
+              <span style="font-family:var(--mono);color:var(--accent)">
+                {{ today.duration_str if today else '—' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Hidden fields — campus config passed from Flask, read by JS below -->
+        <input type="hidden" id="f-latitude"       value="">
+        <input type="hidden" id="f-longitude"      value="">
+        <input type="hidden" id="f-accuracy"       value="">
+        <input type="hidden" id="csrf-token"       value="{{ csrf_token() }}">
+        <input type="hidden" id="cfg-campus-lat"   value="{{ config.CAMPUS_LAT }}">
+        <input type="hidden" id="cfg-campus-lon"   value="{{ config.CAMPUS_LON }}">
+        <input type="hidden" id="cfg-campus-radius" value="{{ config.CAMPUS_RADIUS }}">
+
+        {% if today and today.logout_time %}
+          <button class="mark-btn success-state" disabled>
+            ✅ Session Complete for Today
+          </button>
+          <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:.6rem">
+            Check-in: {{ today.login_str }} · Check-out: {{ today.logout_str }}
+          </div>
+        {% elif today and today.login_time %}
+          <button class="mark-btn success-state" id="mark-btn" onclick="submitAttendance('checkout')">
+            🚪 Check Out — End Session
+          </button>
+          <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:.6rem" id="btn-hint">
+            Tap to check out and record your exit time
+          </div>
+        {% else %}
+          <button class="mark-btn" id="mark-btn" onclick="submitAttendance('checkin')" disabled>
+            📍 Verifying Location...
+          </button>
+          <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:.6rem" id="btn-hint">
+            Waiting for GPS signal...
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Geo-Validation Info</h3></div>
+      <div class="card-body">
+        <div class="entry-row">
+          <span style="font-size:16px">🏫</span>
+          <div class="entry-info">
+            <div class="entry-name">Campus Centre</div>
+            <div class="entry-time" id="campus-centre">Loading...</div>
+          </div>
+        </div>
+        <div class="entry-row">
+          <span style="font-size:16px">📐</span>
+          <div class="entry-info">
+            <div class="entry-name">Allowed Radius</div>
+            <div class="entry-time" id="campus-radius-info">Loading...</div>
+          </div>
+        </div>
+        <div class="entry-row">
+          <span style="font-size:16px">📏</span>
+          <div class="entry-info">
+            <div class="entry-name">Your Distance</div>
+            <div class="entry-time" id="your-distance">Calculating...</div>
+          </div>
+        </div>
+        <div class="entry-row">
+          <span style="font-size:16px">🕐</span>
+          <div class="entry-info">
+            <div class="entry-name">Last Verified</div>
+            <div class="entry-time" id="last-verified">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  // ── Read campus config from hidden inputs (no Jinja in JS) ──
+  var CAMPUS_LAT    = parseFloat(document.getElementById('cfg-campus-lat').value);
+  var CAMPUS_LON    = parseFloat(document.getElementById('cfg-campus-lon').value);
+  var CAMPUS_RADIUS = parseFloat(document.getElementById('cfg-campus-radius').value);
+  var CSRF_TOKEN    = document.getElementById('csrf-token').value;
+
+  var currentLat = null;
+  var currentLon = null;
+  var currentAcc = null;
+
+  // Populate static info
+  document.getElementById('campus-centre').textContent     = CAMPUS_LAT + '\u00b0N, ' + CAMPUS_LON + '\u00b0E';
+  document.getElementById('campus-radius-info').textContent = CAMPUS_RADIUS + ' metres from centre';
+  document.getElementById('mark-date-badge').textContent   = new Date().toLocaleDateString('en-IN',
+    {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+  // ── Haversine ──
+  function haversine(lat1, lon1, lat2, lon2) {
+    var R     = 6371000;
+    var dLat  = (lat2 - lat1) * Math.PI / 180;
+    var dLon  = (lon2 - lon1) * Math.PI / 180;
+    var a     = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // ── GPS watch ──
+  if ('geolocation' in navigator) {
+    navigator.geolocation.watchPosition(
+      function (pos) {
+        currentLat = pos.coords.latitude;
+        currentLon = pos.coords.longitude;
+        currentAcc = pos.coords.accuracy;
+
+        document.getElementById('gps-lat').textContent       = currentLat.toFixed(6) + '\u00b0N';
+        document.getElementById('gps-lon').textContent       = currentLon.toFixed(6) + '\u00b0E';
+        document.getElementById('f-latitude').value          = currentLat;
+        document.getElementById('f-longitude').value         = currentLon;
+        document.getElementById('f-accuracy').value          = currentAcc;
+        document.getElementById('last-verified').textContent = 'Just now \u00b7 ' +
+          new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true});
+
+        var statusBox = document.getElementById('gps-status-box');
+        statusBox.className = 'gps-status found';
+        statusBox.innerHTML = '<div class="status-dot-anim"></div><span>GPS acquired \u00b7 Accuracy: \u00b1' +
+                              currentAcc.toFixed(0) + 'm</span>';
+
+        var dist      = haversine(CAMPUS_LAT, CAMPUS_LON, currentLat, currentLon);
+        var campusBox = document.getElementById('gps-campus-box');
+        var distEl    = document.getElementById('your-distance');
+        campusBox.style.display = 'flex';
+
+        if (dist <= CAMPUS_RADIUS) {
+          campusBox.className = 'gps-status inside';
+          campusBox.innerHTML = '<span>\u2705</span><span>Within campus boundary (' +
+                                dist.toFixed(0) + 'm from centre)</span>';
+          distEl.textContent  = dist.toFixed(0) + 'm \u2014 Within range \u2705';
+          distEl.style.color  = 'var(--success)';
+          var btn = document.getElementById('mark-btn');
+          if (btn && !btn.classList.contains('success-state')) {
+            btn.disabled   = false;
+            btn.innerHTML  = '\ud83d\udccd Mark Attendance \u2014 Check In';
+            var hint = document.getElementById('btn-hint');
+            if (hint) hint.textContent = 'GPS verified. Tap to mark attendance.';
+          }
+        } else {
+          campusBox.className = 'gps-status outside';
+          campusBox.innerHTML = '<span>\u274c</span><span>Outside campus boundary (' +
+                                dist.toFixed(0) + 'm from centre)</span>';
+          distEl.textContent  = dist.toFixed(0) + 'm \u2014 Outside range \u274c';
+          distEl.style.color  = 'var(--danger)';
+          var btnO = document.getElementById('mark-btn');
+          if (btnO && !btnO.classList.contains('success-state')) {
+            btnO.disabled  = true;
+            btnO.innerHTML = '\u274c Outside Campus \u2014 Cannot Mark';
+            var hintO = document.getElementById('btn-hint');
+            if (hintO) hintO.textContent = 'You must be on campus to mark attendance.';
+          }
+        }
+      },
+      function (err) {
+        var statusBox = document.getElementById('gps-status-box');
+        statusBox.className = 'gps-status error';
+        statusBox.innerHTML = '<div class="status-dot-anim"></div><span>GPS error: ' + err.message + '</span>';
+        var btn = document.getElementById('mark-btn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '\u26a0 GPS Unavailable'; }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  } else {
+    document.getElementById('gps-status-box').className = 'gps-status error';
+    document.getElementById('gps-status-box').innerHTML = '<span>GPS not supported in this browser.</span>';
+  }
+
+  // ── Submit to Flask API ──
+  window.submitAttendance = function (action) {
+    var btn = document.getElementById('mark-btn');
+    if (!btn || btn.disabled) return;
+    btn.disabled  = true;
+    btn.innerHTML = '\ud83d\udd04 Processing...';
+
+    fetch('/api/mark', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken':  CSRF_TOKEN
+      },
+      body: JSON.stringify({
+        latitude:  currentLat,
+        longitude: currentLon,
+        accuracy:  currentAcc,
+        action:    action
+      })
+    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data.success) {
+        showToast('\u2705', data.message);
+        setTimeout(function () { location.reload(); }, 1200);
+      } else {
+        showToast('\u274c', data.message);
+        btn.disabled  = false;
+        btn.innerHTML = action === 'checkin'
+          ? '\ud83d\udccd Mark Attendance \u2014 Check In'
+          : '\ud83d\udeaa Check Out \u2014 End Session';
+      }
+    })
+    .catch(function () {
+      showToast('\u26a0\ufe0f', 'Network error. Please try again.');
+      btn.disabled  = false;
+      btn.innerHTML = '\u26a0 Retry';
+    });
+  };
+
+}());
+</script>
+{% endblock %}

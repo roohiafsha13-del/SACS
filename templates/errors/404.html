@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 Not Found — SCAS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)">
+  <div style="text-align:center;padding:2rem">
+    <div style="font-size:5rem;margin-bottom:1rem">🔍</div>
+    <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:5rem;font-weight:800;color:var(--accent);line-height:1">404</div>
+    <div style="font-size:1.2rem;font-weight:700;color:var(--text);margin:.75rem 0 .4rem">Page Not Found</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:2rem">The page you're looking for doesn't exist or has been moved.</div>
+    <a href="{{ url_for('index') }}" class="btn btn-blue">← Back to Dashboard</a>
+  </div>
+</body>
+</html>

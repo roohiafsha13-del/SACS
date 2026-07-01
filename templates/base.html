@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SCAS{% endblock %} — Smart Campus Attendance</title>
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#0b0f1a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SCAS">
+  <meta name="description" content="Smart Campus Attendance System with GPS verification">
+  <!-- PWA Manifest & Icons -->
+  <link rel="manifest" href="{{ url_for('manifest') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div id="page-app" class="page active">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">📡</div>
+      <div class="sidebar-logo-text">SC<span>AS</span></div>
+    </div>
+
+    {% if current_user.is_admin %}
+    <!-- Admin Navigation -->
+    <div class="sidebar-section">Admin</div>
+    <a href="{{ url_for('admin_dashboard') }}">
+      <div class="nav-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+        <span class="nav-icon">⊞</span> Dashboard
+      </div>
+    </a>
+    <a href="{{ url_for('admin_students') }}">
+      <div class="nav-item {% if request.endpoint == 'admin_students' %}active{% endif %}">
+        <span class="nav-icon">👥</span> Students
+      </div>
+    </a>
+    <a href="{{ url_for('admin_attendance') }}">
+      <div class="nav-item {% if request.endpoint == 'admin_attendance' %}active{% endif %}">
+        <span class="nav-icon">✅</span> Attendance
+      </div>
+    </a>
+    <a href="{{ url_for('admin_reports') }}">
+      <div class="nav-item {% if request.endpoint == 'admin_reports' %}active{% endif %}">
+        <span class="nav-icon">📊</span> Reports
+      </div>
+    </a>
+    <a href="{{ url_for('admin_entry_exit') }}">
+      <div class="nav-item {% if request.endpoint == 'admin_entry_exit' %}active{% endif %}">
+        <span class="nav-icon">🚪</span> Entry-Exit Logs
+      </div>
+    </a>
+
+    {% else %}
+    <!-- Student Navigation -->
+    <div class="sidebar-section">Student</div>
+    <a href="{{ url_for('student_dashboard') }}">
+      <div class="nav-item {% if request.endpoint == 'student_dashboard' %}active{% endif %}">
+        <span class="nav-icon">⊞</span> Dashboard
+      </div>
+    </a>
+    <a href="{{ url_for('mark_attendance_page') }}">
+      <div class="nav-item {% if request.endpoint == 'mark_attendance_page' %}active{% endif %}">
+        <span class="nav-icon">📍</span> Mark Attendance
+      </div>
+    </a>
+    <a href="{{ url_for('student_history') }}">
+      <div class="nav-item {% if request.endpoint == 'student_history' %}active{% endif %}">
+        <span class="nav-icon">📋</span> My Attendance
+      </div>
+    </a>
+    <a href="{{ url_for('student_entry_exit') }}">
+      <div class="nav-item {% if request.endpoint == 'student_entry_exit' %}active{% endif %}">
+        <span class="nav-icon">🚪</span> Entry / Exit Log
+      </div>
+    </a>
+    {% endif %}
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar">{{ current_user.initials }}</div>
+        <div>
+          <div class="sidebar-user-name">{{ current_user.name }}</div>
+          <div class="sidebar-user-role">
+            {% if current_user.is_admin %}Administrator
+            {% else %}Student · {{ current_user.batch or 'N/A' }}{% endif %}
+          </div>
+        </div>
+        <form method="POST" action="{{ url_for('logout') }}" style="margin-left:auto">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="sidebar-logout" title="Logout">⏻</button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <button id="menu-toggle"
+        onclick="document.getElementById('sidebar').classList.toggle('open')"
+        style="display:none;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:4px 8px;margin-right:.5rem;flex-shrink:0"
+        aria-label="Open menu">&#9776;</button>
+      <div>
+        <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+        <div class="topbar-breadcrumb">{% block breadcrumb %}{% endblock %}</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-time" id="live-clock">--:--:--</div>
+        <div class="topbar-notif">🔔</div>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="padding: 0 1.5rem; padding-top: 1rem;">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'danger' else 'info' }}">
+              {{ '✅' if category == 'success' else '❌' if category == 'danger' else 'ℹ️' }}
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Page content -->
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /page-app -->
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toast-icon">✅</span>
+  <span id="toast-msg">Done!</span>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block extra_js %}{% endblock %}
+
+<script>
+  // Start live clock on every page
+  startLiveClock();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+      .then(function (r) { console.log('[PWA] SW registered:', r.scope); })
+      .catch(function (e) { console.log('[PWA] SW failed:', e); });
+  });
+}
+</script>
+</body>
+</html>

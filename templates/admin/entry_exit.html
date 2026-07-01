@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Entry-Exit Logs{% endblock %}
+{% block page_title %}Entry-Exit Logs{% endblock %}
+{% block breadcrumb %}Admin / Entry-Exit{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Entry-Exit Logs</h1>
+    <p>Campus access records — {{ sel_date.strftime('%A, %d %B %Y') }}</p>
+  </div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <form method="GET" style="display:flex;gap:.5rem">
+      <input type="date" name="date" value="{{ sel_date.isoformat() }}"
+             style="background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:.55rem .9rem;border-radius:var(--r-sm);font-size:13px;outline:none">
+      <button type="submit" class="btn btn-blue">Filter</button>
+    </form>
+    <a href="{{ url_for('export_csv', **{'from': sel_date.isoformat(), 'to': sel_date.isoformat()}) }}"
+       class="btn btn-outline">⬇ Export</a>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card green">
+    <div class="stat-icon">🏫</div>
+    <div class="stat-num">{{ on_campus }}</div>
+    <div class="stat-label">On Campus Now</div>
+    <div class="stat-change"><span class="badge-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--success);margin-right:4px"></span>Live</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-icon">📥</div>
+    <div class="stat-num">{{ records | selectattr('login_time') | list | length }}</div>
+    <div class="stat-label">Total Entries</div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-icon">📤</div>
+    <div class="stat-num">{{ records | selectattr('logout_time') | list | length }}</div>
+    <div class="stat-label">Exits Today</div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-icon">👥</div>
+    <div class="stat-num">{{ records | length }}</div>
+    <div class="stat-label">Total Records</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Campus Access Log — {{ sel_date.strftime('%d %B %Y') }}</h3>
+    <span class="badge {{ 'badge-green' if on_campus > 0 else 'badge-neutral' }}">
+      {{ on_campus }} on campus
+    </span>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Batch</th>
+          <th>Entry Time</th>
+          <th>Exit Time</th>
+          <th>Duration</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in records %}
+          {% set u = rec.user %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:.6rem">
+              <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">
+                {{ u.initials }}
+              </div>
+              <strong>{{ u.name }}</strong>
+            </div>
+          </td>
+          <td><span class="badge badge-blue">{{ u.batch or '—' }}</span></td>
+          <td class="td-mono {% if rec.login_time %}td-success{% else %}td-dim{% endif %}">
+            {{ rec.login_str }}
+          </td>
+          <td class="td-mono {% if rec.logout_time %}td-danger{% else %}td-dim{% endif %}">
+            {{ rec.logout_str }}
+          </td>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--accent2)">
+            {{ rec.duration_str }}
+          </td>
+          <td>
+            {% if rec.login_time and not rec.logout_time %}
+              <span class="badge badge-green"><span class="badge-dot"></span>On Campus</span>
+            {% elif rec.login_time and rec.logout_time %}
+              <span class="badge badge-teal">Exited</span>
+            {% else %}
+              <span class="badge badge-red">Absent</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align:center;color:var(--text3);padding:2.5rem">
+            No entry-exit records for this date.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

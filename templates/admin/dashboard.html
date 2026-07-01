@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+{% block breadcrumb %}Admin / Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Admin Dashboard</h1>
+    <p>{{ now.strftime('%A, %d %B %Y') }} &nbsp;·&nbsp; Real-time campus overview</p>
+  </div>
+  <div style="display:flex;gap:.5rem">
+    <a href="{{ url_for('export_csv') }}" class="btn btn-outline">⬇ Export Today</a>
+    <a href="{{ url_for('admin_students') }}" class="btn btn-blue">+ Add Student</a>
+  </div>
+</div>
+
+<!-- KPI stats -->
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-icon">👥</div>
+    <div class="stat-num">{{ total }}</div>
+    <div class="stat-label">Total Students</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-icon">✅</div>
+    <div class="stat-num">{{ present }}</div>
+    <div class="stat-label">Present Today</div>
+    <div class="stat-change stat-up">{{ ((present/total)*100)|round(1) if total else 0 }}% rate</div>
+  </div>
+  <div class="stat-card danger">
+    <div class="stat-icon">❌</div>
+    <div class="stat-num">{{ absent }}</div>
+    <div class="stat-label">Absent Today</div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-icon">🏫</div>
+    <div class="stat-num">{{ on_campus }}</div>
+    <div class="stat-label">On Campus Now</div>
+    <div class="stat-change stat-neutral">Live GPS count</div>
+  </div>
+</div>
+
+<div class="grid2">
+
+  <!-- Live entry feed -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Live Entry Feed</h3>
+      <span class="badge badge-green"><span class="badge-dot"></span>Live</span>
+    </div>
+    <div class="card-body">
+      {% for rec in recent_entries %}
+        {% set u = rec.user %}
+        <div class="entry-row">
+          <div class="entry-avatar">{{ u.initials }}</div>
+          <div class="entry-info">
+            <div class="entry-name">{{ u.name }}</div>
+            <div class="entry-time">
+              {% if rec.login_time %}{{ rec.login_time.strftime('%I:%M %p') }}{% endif %}
+              · {{ u.batch or 'N/A' }}
+            </div>
+          </div>
+          {% if rec.logout_time %}
+            <span class="badge badge-teal">{{ rec.duration_str }}</span>
+          {% elif rec.login_time %}
+            <span class="badge badge-green">Active</span>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <p>No check-ins recorded today yet.</p>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="card-footer">
+      <a href="{{ url_for('admin_attendance') }}" class="btn btn-sm btn-outline">View All →</a>
+    </div>
+  </div>
+
+  <!-- Absentees -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Absentees Today</h3>
+      <span class="badge badge-red">{{ absent_users | length }} students</span>
+    </div>
+    <div class="card-body">
+      {% for u in absent_users[:6] %}
+        {% set att_pct = u.attendance_percentage() %}
+        <div class="entry-row">
+          <div class="entry-avatar" style="background:linear-gradient(135deg,var(--danger),#ff8080)">
+            {{ u.initials }}
+          </div>
+          <div class="entry-info">
+            <div class="entry-name">{{ u.name }}</div>
+            <div class="entry-time">Attendance: {{ att_pct }}%</div>
+          </div>
+          {% if att_pct < 60 %}
+            <span class="badge badge-red">Critical</span>
+          {% elif att_pct < 75 %}
+            <span class="badge badge-warn">Low</span>
+          {% else %}
+            <span class="badge badge-neutral">Absent</span>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">🎉</div>
+          <p>All students present today!</p>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="card-footer">
+      <a href="{{ url_for('admin_attendance') }}" class="btn btn-sm btn-outline">Full Report →</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Quick links -->
+<div class="grid3" style="margin-top:1rem">
+  <a href="{{ url_for('admin_students') }}" style="text-decoration:none">
+    <div class="card" style="padding:1.25rem;text-align:center;cursor:pointer;transition:transform .2s" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+      <div style="font-size:2rem;margin-bottom:.5rem">👥</div>
+      <div style="font-weight:700;font-size:14px">Student Management</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:.25rem">Add, edit, remove students</div>
+    </div>
+  </a>
+  <a href="{{ url_for('admin_reports') }}" style="text-decoration:none">
+    <div class="card" style="padding:1.25rem;text-align:center;cursor:pointer;transition:transform .2s" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+      <div style="font-size:2rem;margin-bottom:.5rem">📊</div>
+      <div style="font-weight:700;font-size:14px">Generate Reports</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:.25rem">Export attendance data</div>
+    </div>
+  </a>
+  <a href="{{ url_for('admin_entry_exit') }}" style="text-decoration:none">
+    <div class="card" style="padding:1.25rem;text-align:center;cursor:pointer;transition:transform .2s" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+      <div style="font-size:2rem;margin-bottom:.5rem">🚪</div>
+      <div style="font-weight:700;font-size:14px">Entry-Exit Logs</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:.25rem">Campus access records</div>
+    </div>
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb %}Student / Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Good {{ 'morning' if now.hour < 12 else 'afternoon' if now.hour < 17 else 'evening' }}, {{ current_user.name.split()[0] }} 👋</h1>
+    <p>{{ now.strftime('%A, %d %B %Y') }} &nbsp;·&nbsp; {{ current_user.batch or 'Student' }}</p>
+  </div>
+  <a href="{{ url_for('mark_attendance_page') }}" class="btn btn-blue">📍 Mark Attendance</a>
+</div>
+
+<!-- Today status banner -->
+{% if today and today.status == 'Present' %}
+  <div class="alert alert-success">
+    ✅ <strong>Today's attendance marked</strong> — Checked in at {{ today.login_str }}.
+    {% if today.logout_time %}Checked out at {{ today.logout_str }}. Duration: {{ today.duration_str }}.
+    {% else %}You are currently on campus.{% endif %}
+  </div>
+{% else %}
+  <div class="alert alert-warn">
+    ⚠️ <strong>Attendance not yet marked today.</strong>
+    <a href="{{ url_for('mark_attendance_page') }}" style="color:inherit;text-decoration:underline;margin-left:.5rem">Mark now →</a>
+  </div>
+{% endif %}
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-icon">📅</div>
+    <div class="stat-num">{{ pct }}%</div>
+    <div class="stat-label">Overall Attendance</div>
+    <div class="stat-change {{ 'stat-up' if pct >= 75 else 'stat-down' }}">
+      {{ '▲ Above' if pct >= 75 else '▼ Below' }} minimum (75%)
+    </div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-icon">✅</div>
+    <div class="stat-num">{{ present }}</div>
+    <div class="stat-label">Days Present</div>
+    <div class="stat-change stat-neutral">This semester</div>
+  </div>
+  <div class="stat-card danger">
+    <div class="stat-icon">❌</div>
+    <div class="stat-num">{{ absent }}</div>
+    <div class="stat-label">Days Absent</div>
+    <div class="stat-change stat-down">Max allowed: 12</div>
+  </div>
+  <div class="stat-card teal">
+    <div class="stat-icon">📊</div>
+    <div class="stat-num">{{ total }}</div>
+    <div class="stat-label">Total Working Days</div>
+    <div class="stat-change stat-neutral">Recorded</div>
+  </div>
+</div>
+
+<div class="grid2">
+
+  <!-- Attendance percentage card -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Attendance Overview</h3>
+      <span class="badge {{ 'badge-green' if pct >= 75 else 'badge-red' }}">{{ pct }}%</span>
+    </div>
+    <div class="card-body">
+      <!-- Donut -->
+      <div style="display:flex;align-items:center;gap:1.5rem">
+        <div class="donut-wrap">
+          {% set dash = (pct / 100 * 238) | round | int %}
+          {% set gap  = 238 - dash %}
+          <svg width="110" height="110" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="38" fill="none" stroke="var(--bg3)" stroke-width="10"/>
+            <circle cx="50" cy="50" r="38" fill="none"
+                    stroke="{{ 'var(--success)' if pct >= 75 else 'var(--danger)' }}"
+                    stroke-width="10"
+                    stroke-dasharray="{{ dash }} {{ gap }}"
+                    stroke-dashoffset="60"
+                    stroke-linecap="round"/>
+          </svg>
+          <div class="donut-center">
+            <div class="donut-pct {% if pct >= 75 %}td-success{% else %}td-danger{% endif %}">{{ pct }}%</div>
+            <div class="donut-sub">present</div>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="margin-bottom:.75rem">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:.3rem">Present ({{ present }} days)</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" style="width:{{ pct }}%;background:var(--success)"></div>
+            </div>
+          </div>
+          <div style="margin-bottom:.75rem">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:.3rem">Minimum required (75%)</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" style="width:75%;background:var(--warn)"></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:.3rem">Absent ({{ absent }} days)</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" style="width:{{ ((absent / total) * 100) | round | int if total else 0 }}%;background:var(--danger)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent activity -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Recent Activity</h3>
+      <a href="{{ url_for('student_history') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <div class="card-body">
+      {% if recent %}
+        {% for rec in recent %}
+        <div class="entry-row">
+          <div class="entry-avatar">{{ current_user.initials }}</div>
+          <div class="entry-info">
+            <div class="entry-name">
+              {% if rec.status == 'Present' %}Attendance Marked{% else %}Absent{% endif %}
+            </div>
+            <div class="entry-time">
+              {{ rec.date.strftime('%a %d %b') }}
+              {% if rec.login_time %} · In: {{ rec.login_str }}{% endif %}
+              {% if rec.logout_time %} · Out: {{ rec.logout_str }}{% endif %}
+            </div>
+          </div>
+          <div>
+            {% if rec.status == 'Present' %}
+              <span class="badge badge-green">Present</span>
+            {% else %}
+              <span class="badge badge-red">Absent</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">📋</div>
+          <p>No attendance records yet.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Pass server time to JS for greeting
+const now = new Date();
+</script>
+{% endblock %}

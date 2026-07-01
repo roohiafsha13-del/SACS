@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Entry / Exit Log{% endblock %}
+{% block page_title %}Entry / Exit Log{% endblock %}
+{% block breadcrumb %}Student / Entry-Exit{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Entry / Exit Log</h1>
+    <p>All campus access records for your account</p>
+  </div>
+</div>
+
+{% set today_rec = namespace(value=none) %}
+{% for r in records %}
+  {% if r.date == today_date %}
+    {% set today_rec.value = r %}
+  {% endif %}
+{% endfor %}
+
+<div class="grid2">
+
+  <!-- Today card -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Today's Activity</h3>
+      {% if today_rec.value and today_rec.value.login_time and not today_rec.value.logout_time %}
+        <span class="badge badge-green"><span class="badge-dot"></span>On Campus</span>
+      {% elif today_rec.value and today_rec.value.logout_time %}
+        <span class="badge badge-teal">Session Complete</span>
+      {% else %}
+        <span class="badge badge-neutral">Not Checked In</span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      {% if today_rec.value and today_rec.value.login_time %}
+        <div style="text-align:center;padding:1rem 0">
+          <div id="campus-timer"
+               style="font-size:2.5rem;font-weight:800;font-family:var(--mono);color:var(--accent)">
+            {{ today_rec.value.duration_str }}
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-top:.3rem">
+            {% if today_rec.value.logout_time %}Total time on campus
+            {% else %}Time on campus today{% endif %}
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="entry-row">
+          <div style="width:36px;height:36px;background:var(--success-glow);border-radius:50%;
+                      display:flex;align-items:center;justify-content:center;font-size:14px">🟢</div>
+          <div class="entry-info">
+            <div class="entry-name">Campus Entry</div>
+            <div class="entry-time">{{ today_rec.value.login_str }} · GPS Verified</div>
+          </div>
+          <span class="badge badge-green">Entry</span>
+        </div>
+        {% if today_rec.value.logout_time %}
+        <div class="entry-row">
+          <div style="width:36px;height:36px;background:var(--danger-glow);border-radius:50%;
+                      display:flex;align-items:center;justify-content:center;font-size:14px">🔴</div>
+          <div class="entry-info">
+            <div class="entry-name">Campus Exit</div>
+            <div class="entry-time">{{ today_rec.value.logout_str }} · GPS Verified</div>
+          </div>
+          <span class="badge badge-red">Exit</span>
+        </div>
+        {% else %}
+        <div class="entry-row">
+          <div style="width:36px;height:36px;background:var(--bg3);border-radius:50%;
+                      display:flex;align-items:center;justify-content:center;font-size:14px">⏳</div>
+          <div class="entry-info">
+            <div class="entry-name">Exit Pending</div>
+            <div class="entry-time">Still on campus</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Pass checkin ISO time to JS via hidden input to avoid Jinja-in-JS issues -->
+        {% if today_rec.value.login_time and not today_rec.value.logout_time %}
+          <input type="hidden" id="checkin-iso"
+                 value="{{ today_rec.value.login_time.strftime('%Y-%m-%dT%H:%M:%S') }}">
+        {% endif %}
+
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">🚪</div>
+          <p>No campus activity recorded today.</p>
+          <a href="{{ url_for('mark_attendance_page') }}"
+             class="btn btn-sm btn-blue" style="margin-top:.75rem">Mark Attendance</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent records -->
+  <div class="card">
+    <div class="card-header"><h3>Recent Records</h3></div>
+    <div class="card-body" style="padding:0">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th>Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rec in records[:10] %}
+            <tr>
+              <td><strong>{{ rec.date.strftime('%a %d %b') }}</strong></td>
+              <td class="td-mono {% if rec.login_time %}td-success{% else %}td-dim{% endif %}">
+                {{ rec.login_str }}
+              </td>
+              <td class="td-mono {% if rec.logout_time %}td-danger{% else %}td-dim{% endif %}">
+                {{ rec.logout_str }}
+              </td>
+              <td>
+                {% if rec.status == 'Present' %}
+                  <span class="badge badge-teal">{{ rec.duration_str }}</span>
+                {% else %}
+                  <span class="badge badge-red">Absent</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="4" style="text-align:center;color:var(--text3);padding:2rem">
+                No records found.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a href="{{ url_for('student_history') }}" class="btn btn-sm btn-outline">
+        View Full History →
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+  // Live timer — read checkin time from hidden input (no Jinja inside JS)
+  var isoInput = document.getElementById('checkin-iso');
+  if (isoInput) {
+    var checkinTime = new Date(isoInput.value + 'Z');
+    setInterval(function () {
+      var secs = Math.floor((Date.now() - checkinTime.getTime()) / 1000);
+      if (secs < 0) secs = 0;
+      var h = String(Math.floor(secs / 3600)).padStart(2, '0');
+      var m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
+      var s = String(secs % 60).padStart(2, '0');
+      var el = document.getElementById('campus-timer');
+      if (el) el.textContent = h + ':' + m + ':' + s;
+    }, 1000);
+  }
+}());
+</script>
+{% endblock %}

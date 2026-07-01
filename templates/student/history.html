@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}My Attendance{% endblock %}
+{% block page_title %}My Attendance{% endblock %}
+{% block breadcrumb %}Student / History{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>My Attendance</h1>
+    <p>Your complete attendance history</p>
+  </div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <a href="{{ url_for('export_csv') }}" class="btn btn-outline">⬇ Export CSV</a>
+  </div>
+</div>
+
+<!-- Summary stats -->
+{% set total_rec  = records.total %}
+{% set present_ct = records.items | selectattr('status','equalto','Present') | list | length %}
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-icon">📅</div>
+    <div class="stat-num">{{ total_rec }}</div>
+    <div class="stat-label">Total Days Recorded</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-icon">✅</div>
+    <div class="stat-num">{{ present_ct }}</div>
+    <div class="stat-label">Present (this page)</div>
+  </div>
+  <div class="stat-card danger">
+    <div class="stat-icon">❌</div>
+    <div class="stat-num">{{ total_rec - present_ct }}</div>
+    <div class="stat-label">Absent (this page)</div>
+  </div>
+  <div class="stat-card warn">
+    <div class="stat-icon">📊</div>
+    <div class="stat-num">
+      {{ ((present_ct / total_rec) * 100) | round(1) if total_rec else 0 }}%
+    </div>
+    <div class="stat-label">This Page Rate</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3>Attendance Log</h3>
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <span class="badge badge-blue">{{ records.total }} records</span>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Day</th>
+          <th>Check In</th>
+          <th>Check Out</th>
+          <th>Duration</th>
+          <th>Status</th>
+          <th>GPS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in records.items %}
+        <tr>
+          <td><strong>{{ rec.date.strftime('%d %b %Y') }}</strong></td>
+          <td style="color:var(--text3)">{{ rec.date.strftime('%a') }}</td>
+          <td class="td-mono {% if rec.login_time %}td-success{% else %}td-dim{% endif %}">
+            {{ rec.login_str }}
+          </td>
+          <td class="td-mono {% if rec.logout_time %}td-danger{% else %}td-dim{% endif %}">
+            {{ rec.logout_str }}
+          </td>
+          <td style="font-family:var(--mono);font-size:12px;color:var(--accent2)">
+            {{ rec.duration_str }}
+          </td>
+          <td>
+            {% if rec.status == 'Present' %}
+              <span class="badge badge-green">Present</span>
+            {% else %}
+              <span class="badge badge-red">Absent</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if rec.login_time %}
+              <span class="badge badge-blue">✓ GPS</span>
+            {% else %}
+              <span class="badge badge-neutral">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center;color:var(--text3);padding:2.5rem">
+            No attendance records found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if records.pages > 1 %}
+  <div class="card-footer">
+    <div style="font-size:12px;color:var(--text2)">
+      Showing {{ records.per_page * (records.page - 1) + 1 }}–{{ [records.per_page * records.page, records.total] | min }}
+      of {{ records.total }} records
+    </div>
+    <div style="display:flex;gap:.4rem">
+      {% if records.has_prev %}
+        <a href="{{ url_for('student_history', page=records.prev_num) }}" class="btn btn-sm btn-outline">← Prev</a>
+      {% endif %}
+      {% for p in records.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+          <a href="{{ url_for('student_history', page=p) }}"
+             class="btn btn-sm {{ 'btn-blue' if p == records.page else 'btn-outline' }}">{{ p }}</a>
+        {% else %}
+          <span style="padding:.35rem .5rem;color:var(--text3)">…</span>
+        {% endif %}
+      {% endfor %}
+      {% if records.has_next %}
+        <a href="{{ url_for('student_history', page=records.next_num) }}" class="btn btn-sm btn-outline">Next →</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

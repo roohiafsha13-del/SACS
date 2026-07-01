@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Edit Student{% endblock %}
+{% block page_title %}Edit Student{% endblock %}
+{% block breadcrumb %}Admin / Students / Edit{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-hdr-left">
+    <h1>Edit Student</h1>
+    <p>Updating record for {{ student.name }}</p>
+  </div>
+  <a href="{{ url_for('admin_students') }}" class="btn btn-outline">← Back to Students</a>
+</div>
+
+<div class="grid2">
+
+  <!-- Edit form -->
+  <div class="card">
+    <div class="card-header"><h3>Student Details</h3></div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('admin_student_edit', student_id=student.id) }}" novalidate>
+        {{ form.hidden_tag() }}
+        <div class="form-row">
+          <div class="form-group2">
+            <label>Full Name</label>
+            {{ form.name(value=student.name, placeholder="Full name") }}
+            {% for e in form.name.errors %}<div style="color:var(--danger);font-size:11px">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="form-group2">
+            <label>Student ID</label>
+            {{ form.student_id(value=student.student_id, placeholder="CS2401") }}
+            {% for e in form.student_id.errors %}<div style="color:var(--danger);font-size:11px">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+        <div class="form-group2">
+          <label>Email Address</label>
+          {{ form.email(value=student.email, placeholder="email@campus.edu") }}
+          {% for e in form.email.errors %}<div style="color:var(--danger);font-size:11px">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="form-row">
+          <div class="form-group2">
+            <label>Batch</label>
+            {{ form.batch() }}
+          </div>
+          <div class="form-group2">
+            <label>New Password <span style="color:var(--text3);font-size:10px">(leave blank to keep current)</span></label>
+            {{ form.password(placeholder="New password (optional)") }}
+            {% for e in form.password.errors %}<div style="color:var(--danger);font-size:11px">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+        <div style="display:flex;gap:.75rem;margin-top:.5rem">
+          <button type="submit" class="btn btn-blue">💾 Save Changes</button>
+          <a href="{{ url_for('admin_students') }}" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Student summary -->
+  <div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="card-header"><h3>Account Summary</h3></div>
+      <div class="card-body">
+        <div class="profile-card" style="background:var(--bg2);border-radius:var(--r);padding:1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+          <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800">
+            {{ student.initials }}
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:800">{{ student.name }}</div>
+            <div style="font-size:12px;color:var(--text2)">{{ student.email }}</div>
+            <div style="margin-top:.3rem">
+              <span class="badge badge-blue">{{ student.batch or 'N/A' }}</span>
+              {% if student.is_active %}
+                <span class="badge badge-green" style="margin-left:.3rem">Active</span>
+              {% else %}
+                <span class="badge badge-red" style="margin-left:.3rem">Inactive</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% set att = student.attendance_percentage() %}
+        <div class="entry-row">
+          <span style="font-size:16px">📊</span>
+          <div class="entry-info">
+            <div class="entry-name">Attendance Rate</div>
+            <div class="entry-time">{{ att }}% overall</div>
+          </div>
+          <span class="badge {{ 'badge-green' if att >= 75 else 'badge-red' }}">{{ att }}%</span>
+        </div>
+        <div class="entry-row">
+          <span style="font-size:16px">🆔</span>
+          <div class="entry-info">
+            <div class="entry-name">Student ID</div>
+            <div class="entry-time">{{ student.student_id or 'Not assigned' }}</div>
+          </div>
+        </div>
+        <div class="entry-row">
+          <span style="font-size:16px">📅</span>
+          <div class="entry-info">
+            <div class="entry-name">Enrolled On</div>
+            <div class="entry-time">{{ student.created_at.strftime('%d %b %Y') }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="card" style="border-color:var(--danger-glow)">
+      <div class="card-header" style="border-color:var(--danger-glow)">
+        <h3 style="color:var(--danger)">Danger Zone</h3>
+      </div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">
+          Permanently remove this student and all their attendance records. This cannot be undone.
+        </p>
+        <form method="POST" action="{{ url_for('admin_student_delete', student_id=student.id) }}"
+              onsubmit="return confirm('Permanently delete {{ student.name }}? All records will be lost.')">
+          {{ form.hidden_tag() }}
+          <button type="submit" class="btn btn-danger">🗑 Delete Student</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

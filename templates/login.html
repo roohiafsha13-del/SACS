@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Smart Campus Attendance System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+<div id="page-login" class="page active">
+  <div class="login-bg">
+    <div class="login-bg-orb a"></div>
+    <div class="login-bg-orb b"></div>
+    <div class="login-bg-orb c"></div>
+  </div>
+
+  <div class="login-grid">
+
+    <!-- Brand Panel -->
+    <div class="login-brand">
+      <div>
+        <div class="brand-logo">
+          <div class="brand-logo-icon">📡</div>
+          <div>
+            <div class="brand-name">SC<span>AS</span></div>
+            <div class="brand-tagline">Smart Campus Attendance System</div>
+          </div>
+        </div>
+        <h2>Attendance,<br><em>reinvented</em><br>with GPS.</h2>
+        <p>Real-time geo-validation ensures only students physically on campus can mark attendance. Zero proxies. Full transparency.</p>
+      </div>
+      <div class="login-features">
+        <div class="login-feat"><div class="login-feat-dot"></div>GPS-verified attendance marking</div>
+        <div class="login-feat"><div class="login-feat-dot"></div>Real-time entry &amp; exit monitoring</div>
+        <div class="login-feat"><div class="login-feat-dot"></div>Automated report generation</div>
+        <div class="login-feat"><div class="login-feat-dot"></div>Proxy attendance prevention</div>
+      </div>
+    </div>
+
+    <!-- Form Panel -->
+    <div class="login-form-wrap">
+      <h3>Welcome back</h3>
+      <p>Sign in to access your dashboard</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'danger' else 'info' }}" style="margin-bottom:1rem">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login_page') }}" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          {{ form.email(class="form-input", id="email", placeholder="you@campus.edu") }}
+          {% if form.email.errors %}
+            {% for error in form.email.errors %}
+              <div style="color:var(--danger);font-size:11px;margin-top:.3rem">{{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          {{ form.password(class="form-input", id="password", placeholder="••••••••") }}
+          {% if form.password.errors %}
+            {% for error in form.password.errors %}
+              <div style="color:var(--danger);font-size:11px;margin-top:.3rem">{{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <div style="display:flex;align-items:center;margin-bottom:1.25rem">
+          {{ form.remember(id="remember") }}
+          <label for="remember" style="font-size:13px;color:var(--text2);margin-left:.5rem;cursor:pointer">Remember me</label>
+        </div>
+
+        <button type="submit" class="btn-primary">Sign In →</button>
+
+        <div class="login-demo">
+          Demo: <span onclick="fillDemo('student')">Student login</span>
+          &nbsp;·&nbsp;
+          <span onclick="fillDemo('admin')">Admin login</span>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+function fillDemo(role) {
+  if (role === 'admin') {
+    document.getElementById('email').value    = 'admin@campus.edu';
+    document.getElementById('password').value = 'Admin@1234';
+  } else {
+    document.getElementById('email').value    = 'ankita.kapoor@campus.edu';
+    document.getElementById('password').value = 'Student@1234';
+  }
+}
+</script>
+</body>
+</html>
