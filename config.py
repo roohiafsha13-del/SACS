@@ -22,8 +22,8 @@ class Config:
     SQLALCHEMY_ECHO = False          # Set True to log all SQL queries
 
     # ── Campus GPS Boundary ───────────────────────────────────
-    CAMPUS_LAT    = float(os.environ.get('CAMPUS_LAT',    17.423024))
-    CAMPUS_LON    = float(os.environ.get('CAMPUS_LON',    78.494913))
+    CAMPUS_LAT    = float(os.environ.get('CAMPUS_LAT',    17.4285))
+    CAMPUS_LON    = float(os.environ.get('CAMPUS_LON',     78.443))
     CAMPUS_RADIUS = float(os.environ.get('CAMPUS_RADIUS_METRES', 10))  # metres
 
     # ── Session ───────────────────────────────────────────────
