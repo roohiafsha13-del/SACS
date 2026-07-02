@@ -607,53 +607,7 @@ def register_routes(app: Flask):
         )
 
 
-    # ── One-time DB seed route ───────────────────────────────
-    # IMPORTANT: Delete this entire route after visiting it once!
-    @app.route('/setup-scas-db-1a2b3c')
-    def setup_db():
-        try:
-            db.create_all()
-            if User.query.filter_by(role='admin').first():
-                return '<h2>Already seeded! Delete this route from app.py now.</h2>', 200
-            # Admin account
-            admin = User(name='Dr. S. Sharma', email='admin@campus.edu', role='admin')
-            admin.set_password('Admin@1234')
-            db.session.add(admin)
-            # Your actual students
-            students_data = [
-                ('Ankita Kapoor',  'IT2401', 'ankita.kapoor@campus.edu', 'IT-A'),
-                ('Shifa Fatima',   'IT2402', 'shifa.fatima@campus.edu',  'IT-A'),
-                ('Suresh Mehta',   'IT2403', 'suresh.m@campus.edu',      'IT-A'),
-                ('Abdul Ahil',     'IT2404', 'ahil.a@campus.edu',        'IT-A'),
-                ('Abdul Hassan',   'IT2405', 'hassan.a@campus.edu',      'IT-B'),
-                ('Maya Singh',     'IT2406', 'maya.s@campus.edu',        'IT-B'),
-                ('Riya Singh',     'IT2407', 'riya.s@campus.edu',        'IT-B'),
-                ('Max Thomas',     'IT2408', 'max.t@campus.edu',         'IT-B'),
-                ('Deepak Nair',    'IT2409', 'deepak.n@campus.edu',      'IT-A'),
-                ('Kavitha Reddy',  'IT2410', 'kavitha.r@campus.edu',     'IT-B'),
-            ]
-            for name, sid, email, batch in students_data:
-                s = User(name=name, student_id=sid, email=email,
-                         batch=batch, role='student')
-                s.set_password('Student@1234')
-                db.session.add(s)
-            db.session.commit()
-            return '''<html><body style="font-family:sans-serif;padding:2rem;background:#0b0f1a;color:#e8ecf4">
-                <h2 style="color:#22c55e">&#10003; Database seeded successfully!</h2>
-                <p style="margin:.5rem 0">Admin &nbsp;&nbsp;: admin@campus.edu / Admin@1234</p>
-                <p style="margin:.5rem 0">Students: ankita.kapoor@campus.edu / Student@1234</p>
-                <p style="margin:.5rem 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                   shifa.fatima@campus.edu / Student@1234</p>
-                <p style="margin:.5rem 0">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                   (all 10 students use Student@1234)</p>
-                <p style="color:#f59e0b;margin-top:1.5rem"><strong>
-                &#9888; NOW: Delete the /setup-scas-db-1a2b3c route from app.py,
-                push to GitHub again, then login.</strong></p>
-                <a href="/login" style="color:#3d7eff;font-size:1.1rem">&#8594; Go to Login</a>
-                </body></html>''', 200
-        except Exception as e:
-            return f'<h2 style="color:red">Error: {str(e)}</h2>', 500
-
+   
     # ── Error handlers ────────────────────────────────────────
     @app.errorhandler(403)
     def forbidden(e):
