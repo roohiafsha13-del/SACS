@@ -67,8 +67,82 @@ def create_app():
     # Create tables on first run
     with app.app_context():
         db.create_all()
+        # Auto-seed on startup if database is empty (handles Render free tier wipes)
+        try:
+            from models import User as _User
+            if not _User.query.filter_by(role='admin').first():
+                with app.test_request_context():
+                    from flask import current_app
+                    _seed_on_startup(app)
+        except Exception:
+            pass   # Don't crash startup if seed fails
 
     return app
+
+
+def _seed_on_startup(app):
+    """Seeds the database on first startup. Safe to call multiple times."""
+    from models import User, Attendance
+    import random
+    from datetime import date, datetime, timedelta
+
+    try:
+        # Admin
+        if not User.query.filter_by(role='admin').first():
+            admin = User(name='Dr. S. Sharma', email='admin@campus.edu', role='admin')
+            admin.set_password('Admin@1234')
+            db.session.add(admin)
+
+        students_data = [
+            ('Ankita Kapoor', 'IT2401', 'ankita.kapoor@campus.edu', 'IT-A'),
+            ('Shifa Fatima',  'IT2402', 'shifa.fatima@campus.edu',  'IT-A'),
+            ('Suresh Mehta',  'IT2403', 'suresh.m@campus.edu',      'IT-A'),
+            ('Abdul Ahil',    'IT2404', 'ahil.a@campus.edu',        'IT-A'),
+            ('Abdul Hassan',  'IT2405', 'hassan.a@campus.edu',      'IT-B'),
+            ('Maya Singh',    'IT2406', 'maya.s@campus.edu',        'IT-B'),
+            ('Riya Singh',    'IT2407', 'riya.s@campus.edu',        'IT-B'),
+            ('Max Thomas',    'IT2408', 'max.t@campus.edu',         'IT-B'),
+            ('Deepak Nair',   'IT2409', 'deepak.n@campus.edu',      'IT-A'),
+            ('Kavitha Reddy', 'IT2410', 'kavitha.r@campus.edu',     'IT-B'),
+        ]
+
+        for name, sid, email, batch in students_data:
+            if not User.query.filter_by(email=email).first():
+                s = User(name=name, student_id=sid, email=email,
+                         batch=batch, role='student')
+                s.set_password('Student@1234')
+                db.session.add(s)
+
+        db.session.flush()
+
+        today = date.today()
+        for name, sid, email, batch in students_data:
+            student = User.query.filter_by(email=email).first()
+            if not student:
+                continue
+            for days_ago in range(1, 21):
+                day = today - timedelta(days=days_ago)
+                if day.weekday() >= 5:
+                    continue
+                if Attendance.query.filter_by(user_id=student.id, date=day).first():
+                    continue
+                is_present = random.random() < 0.80
+                if is_present:
+                    hour   = random.randint(8, 9)
+                    minute = random.randint(0, 55)
+                    cin    = datetime(day.year, day.month, day.day, hour, minute)
+                    cout   = cin + timedelta(hours=random.randint(6, 9))
+                    rec = Attendance(user_id=student.id, date=day,
+                                     login_time=cin, logout_time=cout,
+                                     status='Present')
+                else:
+                    rec = Attendance(user_id=student.id, date=day, status='Absent')
+                db.session.add(rec)
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f'[SCAS] Auto-seed failed: {e}')
 
 
 # ── Flask-Login setup ─────────────────────────────────────────
@@ -607,7 +681,84 @@ def register_routes(app: Flask):
         )
 
 
-  
+    # ── Auto-seed on every startup ──────────────────────────
+    # Safe to keep permanently — checks before inserting,
+    # never duplicates, auto-runs when Render wipes the DB.
+    @app.route('/setup-scas-db-1a2b3c')
+    def setup_db():
+        return _do_seed()
+
+    def _do_seed():
+        try:
+            db.create_all()
+            # Only seed if no admin exists yet
+            if User.query.filter_by(role='admin').first():
+                return '<html><body style="font-family:sans-serif;padding:2rem;background:#0b0f1a;color:#e8ecf4">'                        '<h2 style="color:#3d7eff">Already seeded. Login below.</h2>'                        '<a href="/login" style="color:#3d7eff;font-size:1.1rem">Go to Login &rarr;</a>'                        '</body></html>', 200
+            # Admin
+            admin = User(name='Dr. S. Sharma', email='admin@campus.edu', role='admin')
+            admin.set_password('Admin@1234')
+            db.session.add(admin)
+            # Students
+            students_data = [
+                ('Ankita Kapoor', 'IT2401', 'ankita.kapoor@campus.edu', 'IT-A'),
+                ('Shifa Fatima',  'IT2402', 'shifa.fatima@campus.edu',  'IT-A'),
+                ('Suresh Mehta',  'IT2403', 'suresh.m@campus.edu',      'IT-A'),
+                ('Abdul Ahil',    'IT2404', 'ahil.a@campus.edu',        'IT-A'),
+                ('Abdul Hassan',  'IT2405', 'hassan.a@campus.edu',      'IT-B'),
+                ('Maya Singh',    'IT2406', 'maya.s@campus.edu',        'IT-B'),
+                ('Riya Singh',    'IT2407', 'riya.s@campus.edu',        'IT-B'),
+                ('Max Thomas',    'IT2408', 'max.t@campus.edu',         'IT-B'),
+                ('Deepak Nair',   'IT2409', 'deepak.n@campus.edu',      'IT-A'),
+                ('Kavitha Reddy', 'IT2410', 'kavitha.r@campus.edu',     'IT-B'),
+            ]
+            import random
+            from datetime import date, datetime, timedelta
+            for name, sid, email, batch in students_data:
+                s = User(name=name, student_id=sid, email=email,
+                         batch=batch, role='student')
+                s.set_password('Student@1234')
+                db.session.add(s)
+            db.session.flush()  # get IDs assigned
+            # Add 20 days of demo attendance for each student
+            today = date.today()
+            for name, sid, email, batch in students_data:
+                student = User.query.filter_by(email=email).first()
+                if not student:
+                    continue
+                for days_ago in range(1, 21):
+                    day = today - timedelta(days=days_ago)
+                    if day.weekday() >= 5:   # skip weekends
+                        continue
+                    is_present = random.random() < 0.80   # 80% attendance rate
+                    if is_present:
+                        hour   = random.randint(8, 9)
+                        minute = random.randint(0, 55)
+                        cin    = datetime(day.year, day.month, day.day, hour, minute)
+                        cout   = cin + timedelta(hours=random.randint(6, 9))
+                        rec = Attendance(user_id=student.id, date=day,
+                                         login_time=cin, logout_time=cout,
+                                         status='Present')
+                    else:
+                        rec = Attendance(user_id=student.id, date=day,
+                                         status='Absent')
+                    db.session.add(rec)
+            db.session.commit()
+            return '''<html><body style="font-family:sans-serif;padding:2rem;
+                       background:#0b0f1a;color:#e8ecf4">
+                <h2 style="color:#22c55e">&#10003; Database seeded with demo data!</h2>
+                <p style="margin:.6rem 0;color:#8b92a8">10 students + 20 days attendance history created.</p>
+                <p style="margin:.4rem 0">Admin &nbsp;&nbsp;&nbsp;: admin@campus.edu / Admin@1234</p>
+                <p style="margin:.4rem 0">Students : ankita.kapoor@campus.edu / Student@1234</p>
+                <p style="margin:.4rem 0;color:#8b92a8">(all 10 students use password: Student@1234)</p>
+                <br>
+                <a href="/login" style="background:#3d7eff;color:#fff;padding:.75rem 1.5rem;
+                   border-radius:8px;text-decoration:none;font-weight:700">
+                   &#8594; Go to Login</a>
+                </body></html>''', 200
+        except Exception as e:
+            db.session.rollback()
+            return f'<html><body style="padding:2rem;background:#0b0f1a;color:#f04040">'                    f'<h2>Error: {str(e)}</h2></body></html>', 500
+
     # ── Error handlers ────────────────────────────────────────
     @app.errorhandler(403)
     def forbidden(e):
